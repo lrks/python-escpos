@@ -56,7 +56,7 @@ class Receipt(object):
 		name += suffix
 
 		# Price
-		self.price += price
+		self.price += (price * pcs)
 		price_str = self.__priceText(price)
 
 		# Print
