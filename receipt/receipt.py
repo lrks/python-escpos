@@ -41,7 +41,7 @@ class Receipt(object):
 		# Suffix
 		suffix = ""
 		if pcs > 1:
-			suffix = "×" + pcs
+			suffix = "×" + str(pcs)
 		area = self.area - Receipt.strWidth(suffix)
 
 		# Name
@@ -112,7 +112,7 @@ if __name__ == '__main__':
 	epson = printer.Network('192.168.1.13', port=9100)
 
 	receipt = Receipt(epson)
-	receipt.header(img='rabbithouse.png', clerk='香風智乃', date='114年5月14日（月） 19:19')
+	receipt.header(img='rabbithouse.png', clerk='香風智乃', date='114年5月14日（日） 19:19')
 	receipt.item('ﾎｯﾄｺｰﾋｰｺﾛﾝﾋﾞｱ', 300)
 	receipt.item('ﾎｯﾄｺｰﾋｰﾌﾞﾙｰﾏｳﾝﾃﾝ', 300)
 	receipt.item('ﾎｯﾄｺｰﾋｰｵﾘｼﾞﾅﾙ', 300)
