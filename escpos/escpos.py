@@ -13,9 +13,10 @@ except ImportError:
 
 import qrcode
 import time
+import binascii
 
-from constants import *
-from exceptions import *
+from .constants import *
+from .exceptions import *
 
 class Escpos:
     """ ESC/POS Printer object """
@@ -39,10 +40,10 @@ class Escpos:
         i = 0
         cont = 0
         buffer = ""
-       
+
         self._raw(S_RASTER_N)
         buffer = "%02X%02X%02X%02X" % (((size[0]/size[1])/8), 0, size[1], 0)
-        self._raw(buffer.decode('hex'))
+        self._raw(binascii.unhexlify(buffer))
         buffer = ""
 
         while i < len(line):
@@ -51,7 +52,7 @@ class Escpos:
             i += 8
             cont += 1
             if cont % 4 == 0:
-                self._raw(buffer.decode("hex"))
+                self._raw(binascii.unhexlify(buffer))
                 buffer = ""
                 cont = 0
 
@@ -72,9 +73,9 @@ class Escpos:
             raise ImageSizeError()
 
         im_border = self._check_image_size(im.size[0])
-        for i in range(im_border[0]):
+        for i in range(int(im_border[0])):
             im_left += "0"
-        for i in range(im_border[1]):
+        for i in range(int(im_border[1])):
             im_right += "0"
 
         for y in range(im.size[1]):
@@ -97,7 +98,7 @@ class Escpos:
                         break
                     elif im_color > (255 * 3 / pattern_len * pattern_len) and im_color <= (255 * 3):
                         pix_line += im_pattern[-1]
-                        break 
+                        break
             pix_line += im_right
             img_size[0] += im_border[1]
 
@@ -108,13 +109,13 @@ class Escpos:
         """ Open image file """
         im_open = Image.open(path_img)
 
-	# Remove the alpha channel on transparent images
-	if im_open.mode == 'RGBA':
-		im_open.load()
-		im = Image.new("RGB", im_open.size, (255, 255, 255))
-		im.paste(im_open, mask=im_open.split()[3])
-	else:
-	        im = im_open.convert("RGB")
+        # Remove the alpha channel on transparent images
+        if im_open.mode == 'RGBA':
+            im_open.load()
+            im = Image.new("RGB", im_open.size, (255, 255, 255))
+            im.paste(im_open, mask=im_open.split()[3])
+        else:
+            im = im_open.convert("RGB")
 
         # Convert the RGB image in printable image
         self._convert_image(im)
@@ -205,9 +206,9 @@ class Escpos:
             self._raw(BARCODE_TXT_BTH)
         elif pos.upper() == "ABOVE":
             self._raw(BARCODE_TXT_ABV)
-        else:  # DEFAULT POSITION: BELOW 
+        else:  # DEFAULT POSITION: BELOW
             self._raw(BARCODE_TXT_BLW)
-        # Type 
+        # Type
         if bc.upper() == "UPC-A":
             self._raw(BARCODE_UPC_A)
         elif bc.upper() == "UPC-E":
@@ -230,7 +231,7 @@ class Escpos:
         else:
             raise exception.BarcodeCodeError()
 
-        
+
     def text(self, txt):
         """ Print alpha-numeric text """
         if txt:
@@ -239,20 +240,39 @@ class Escpos:
             raise TextError()
 
 
-    def set(self, align='left', font='a', type='normal', width=1, height=1, density=9):
-        """ Set text properties """
-        # Width
-        if height == 2 and width == 2:
-            self._raw(TXT_NORMAL)
-            self._raw(TXT_4SQUARE)
-        elif height == 2 and width != 2:
-            self._raw(TXT_NORMAL)
-            self._raw(TXT_2HEIGHT)
-        elif width == 2 and height != 2:
-            self._raw(TXT_NORMAL)
-            self._raw(TXT_2WIDTH)
-        else: # DEFAULT SIZE: NORMAL
-            self._raw(TXT_NORMAL)
+    def jpInit(self):
+        self.charcode('JIS')
+        self._raw(b'\x1c\x43\x01')
+
+    def jpText(self, txt, dw=False, dh=False):
+        self._raw(b'\x1c\x26')    # Kanji mode ON
+        n = 0x00
+        if (dw):
+            n += 0x04
+        if (dh):
+            n += 0x08
+        if (n != 0x00):
+            self._raw(b'\x1c\x21' + n.to_bytes(1, byteorder='big')) # Char size ON
+        self.text(txt.encode('shift-jis', 'ignore'))
+        if (n != 0x00):
+            self._raw(b'\x1c\x21\x00')  # Char size OFF
+        self._raw(b'\x1c\x2e')    # Kanji mode OFF
+
+    def setAlign(self, align='left'):
+        if align.upper() == "CENTER":
+            self._raw(TXT_ALIGN_CT)
+        elif align.upper() == "RIGHT":
+            self._raw(TXT_ALIGN_RT)
+        elif align.upper() == "LEFT":
+            self._raw(TXT_ALIGN_LT)
+
+    def setFont(self, font='a'):
+        if font.upper() == "B":
+            self._raw(TXT_FONT_B)
+        else:  # DEFAULT FONT: A
+            self._raw(TXT_FONT_A)
+
+    def setType(self, type='normal'):
         # Type
         if type.upper() == "B":
             self._raw(TXT_BOLD_ON)
@@ -272,19 +292,21 @@ class Escpos:
         elif type.upper == "NORMAL":
             self._raw(TXT_BOLD_OFF)
             self._raw(TXT_UNDERL_OFF)
-        # Font
-        if font.upper() == "B":
-            self._raw(TXT_FONT_B)
-        else:  # DEFAULT FONT: A
-            self._raw(TXT_FONT_A)
-        # Align
-        if align.upper() == "CENTER":
-            self._raw(TXT_ALIGN_CT)
-        elif align.upper() == "RIGHT":
-            self._raw(TXT_ALIGN_RT)
-        elif align.upper() == "LEFT":
-            self._raw(TXT_ALIGN_LT)
-        # Density
+
+    def setWidth(self, width=1, height=1):
+        if height == 2 and width == 2:
+            self._raw(TXT_NORMAL)
+            self._raw(TXT_4SQUARE)
+        elif height == 2 and width != 2:
+            self._raw(TXT_NORMAL)
+            self._raw(TXT_2HEIGHT)
+        elif width == 2 and height != 2:
+            self._raw(TXT_NORMAL)
+            self._raw(TXT_2WIDTH)
+        else: # DEFAULT SIZE: NORMAL
+            self._raw(TXT_NORMAL)
+
+    def setDensity(self, density=9):
         if density == 0:
             self._raw(PD_N50)
         elif density == 1:
@@ -306,6 +328,12 @@ class Escpos:
         else:# DEFAULT: DOES NOTHING
             pass
 
+    def setTab(self, *args):
+        msg = b'\x1b\x44'
+        for arg in args:
+            msg += arg.to_bytes(1, byteorder='big')
+        msg += b'\x00'
+        self._raw(msg)
 
     def cut(self, mode=''):
         """ Cut paper """
