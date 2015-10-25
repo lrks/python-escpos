@@ -164,6 +164,9 @@ class Network(Escpos):
         self.device.close()
 
 
+    def close(self):
+        self.__del__()
+
 
 class File(Escpos):
     """ Define Generic file printer """
