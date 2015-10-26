@@ -4,7 +4,6 @@
   * Python3に対応していない
   * 日本語出力に対応していない
   * 直そう
-
 * Python3向けにしました
   * `print`などに加え、`str`と`byte`の区別により変更が必要なところも変えた
   * `Network`を用いた場合のみ
@@ -40,3 +39,8 @@
 ## サンプル
 * `sample/receipt`ディレクトリに、58mm幅レシート出力用サンプルあり
 * `zenhan`モジュールのインストールが必要
+
+
+## 参考文献
+* http://www.delfi.com/SupportDL/Epson/Manuals/TM-T88IV/Programming%20manual%20APG_1005_receipt.pdf
+* (`CONFIDENTIAL`って書いているんですが...)
