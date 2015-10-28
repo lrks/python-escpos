@@ -28,43 +28,37 @@ class Receipt(object):
 		else:
 			week = ['月', '火', '水', '木', '金', '土', '日']
 			now = datetime.datetime.now()
-			txt = now.strftime('%Y年%-m月%-d日（')
-			txt += week[now.weekday()]
-			txt += now.strftime('） %-H:%M')
-			self.printer.jpText(txt)
+			self.printer.jpText(now.strftime('%%Y年%%-m月%%-d日（%s） %%-H:%%M' % week[now.weekday()]))
 		self.printer.text("\n\n")
 		self.printer.jpText("領 収 証\n\n", dw=True)
 		self.printer.setAlign('left')
 
 
 	def item(self, name, price, pcs=1):
-		# Suffix
-		suffix = ""
-		if pcs > 1:
-			suffix = "×" + str(pcs)
-		area = self.area - Receipt.strWidth(suffix)
-
 		# Name
 		i = 0
 		name = name.encode('shift-jis', 'ignore').decode('shift-jis')
 		while True:
 			width = Receipt.strWidth(name)
-			if (width <= area):
+			if (width <= self.area):
 				break
 			i -= 1
 			name = name[0:i]
-		name += suffix
+		txt = name
 
 		# Price
-		self.price += (price * pcs)
-		price_str = self.__priceText(price)
+		p = (price * pcs)
+		self.price += p
+		if pcs > 1:
+			txt += "\n    @%d×%d\t" % (price, pcs)
+		txt += "\t" + self.__priceText(p)
 
 		# Print
-		self.printer.jpText(name + "\t" + price_str + "\n")
+		self.printer.jpText(txt)
 
 
 	def footer(self, cash=None):
-		self.__setTab(self.area + self.free, 15)
+		self.__setTab(self.width, self.width / 2)
 		self.printer.jpText("\n小　　計\t" + self.__priceText(self.price) + "\n")
 		self.printer.jpText("内消費税\t" + self.__priceText(round(self.price * self.tax)) + "\n")
 		self.printer.jpText("合計", dw=True)
@@ -83,16 +77,17 @@ class Receipt(object):
 
 	def __setTab(self, width, tab):
 		self.area = tab
-		self.free = width - tab
+		self.width = width
 		self.printer.setTab(tab)
 
 
 	def __priceText(self, val, zen=False):
-		string = "{:,d}".format(val)
+		prefix = '-' if price < 0 else '￥'
+		string = prefix + "{:,d}".format(val)
 		if zen:
 			string = zenhan.h2z(string)
-		space = self.free - (Receipt.strWidth(string) + 2)
-		return (" " * space) + "￥" + string
+		space = (self.width - self.area) - (Receipt.strWidth(string))
+		return (" " * space) + string
 
 
 	@staticmethod
@@ -117,5 +112,3 @@ if __name__ == '__main__':
 	receipt.item('ﾎｯﾄｺｰﾋｰﾌﾞﾙｰﾏｳﾝﾃﾝ', 300)
 	receipt.item('ﾎｯﾄｺｰﾋｰｵﾘｼﾞﾅﾙ', 300)
 	receipt.footer(1000)
-
-
