@@ -1,3 +1,5 @@
+※ このリポジトリはメンテンスされていません。また、間違いではないもののESC/POSにとって無駄なコマンドが含まれます。 https://booth.pm/ja/items/489108 や 続編 https://booth.pm/ja/items/666872 …読もう！
+
 # python-escpos for Japanese
 
 * python-escpos という素晴らしいライブラリ
